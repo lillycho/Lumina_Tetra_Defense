@@ -1,6 +1,66 @@
 import test from "node:test";
 import assert from "node:assert/strict";
+import { existsSync, readFileSync } from "node:fs";
+import { fileURLToPath } from "node:url";
 import { DIRECTIONS, GameState, shapeCells } from "./core.js";
+import { ART_ASSETS, blockAssetForState } from "./art-assets.js";
+
+test("현재 사용하기로 한 아트 에셋 매니페스트가 실제 파일과 연결된다", () => {
+  const required = [
+    ART_ASSETS.background.stage,
+    ART_ASSETS.castle.idle,
+    ART_ASSETS.castle.hit,
+    ART_ASSETS.enemies.fragment.idle,
+    ART_ASSETS.enemies.fragment.move,
+    ART_ASSETS.enemies.fragment.attack,
+    ART_ASSETS.enemies.fragment.vanish,
+    ART_ASSETS.tiles.field,
+    ART_ASSETS.tiles.entrance,
+    ART_ASSETS.tiles.spawn,
+    ART_ASSETS.tiles.hoverValid,
+    ART_ASSETS.tiles.hoverInvalid,
+    ART_ASSETS.cards.blueprint,
+    ART_ASSETS.cards.event,
+    ...Object.values(ART_ASSETS.icons),
+    ...Object.values(ART_ASSETS.blocks).flatMap((states) => Object.values(states))
+  ];
+
+  assert.equal(required.includes("assets/art/backgrounds/bg_stage_01_sunset.png"), false);
+  assert.equal(required.includes("assets/art/backgrounds/bg_stage_02_workshop.png"), false);
+  assert.equal(blockAssetForState({ material: "wood", hp: 1, maxHp: 3 }), ART_ASSETS.blocks.wood.critical);
+
+  for (const assetPath of required) {
+    assert.equal(existsSync(fileURLToPath(new URL(assetPath, import.meta.url))), true, assetPath);
+  }
+});
+
+test("UI는 둥근모 폰트와 화면 맞춤 확대 레이아웃을 사용한다", () => {
+  const css = readFileSync(fileURLToPath(new URL("./styles.css", import.meta.url)), "utf8");
+  const html = readFileSync(fileURLToPath(new URL("./index.html", import.meta.url)), "utf8");
+
+  assert.equal(existsSync(fileURLToPath(new URL("./assets/fonts/DungGeunMo.ttf", import.meta.url))), true);
+  assert.match(css, /@font-face[\s\S]*font-family:\s*"DungGeunMo"/);
+  assert.match(css, /font-size:\s*150%/);
+  assert.match(css, /\.topbar\s*\{[\s\S]*display:\s*none/);
+  assert.match(css, /\.game-shell\s*\{[\s\S]*--ui-scale:/);
+  assert.match(css, /\.forecast-panel\s*\{[\s\S]*width:\s*240px/);
+  assert.match(css, /\.battlefield\s*\{[\s\S]*grid-column:\s*1\s*\/\s*-1/);
+  assert.match(css, /line-height:\s*1\.65/);
+  assert.match(css, /\.game-shell\s*\{[\s\S]*align-content:\s*center/);
+  assert.match(css, /\.battlefield\s*\{[\s\S]*transform:\s*translateY\(-24px\)/);
+  assert.match(css, /\.merge-panel\s*\{[\s\S]*justify-self:\s*center/);
+  assert.match(css, /\.hand-panel\s*\{[\s\S]*justify-self:\s*center/);
+  assert.match(css, /\.direction-icon\s*\{[\s\S]*width:\s*24px/);
+  assert.match(html, /<h1>루미나 테트라 디펜스<\/h1>/);
+});
+
+test("설계도 카드 상단은 블럭 모양 아이콘과 전선 방향 텍스트 없이 방향 아이콘만 쓴다", () => {
+  const gameJs = readFileSync(fileURLToPath(new URL("./game.js", import.meta.url)), "utf8");
+
+  assert.equal(gameJs.includes("shapeIcon(card.shape)"), false);
+  assert.equal(gameJs.includes("${DIRECTION_LABELS[card.direction]} 전선"), false);
+  assert.match(gameJs, /class="direction-icon"/);
+});
 
 test("전선은 왼쪽과 오른쪽 두 방향만 사용한다", () => {
   assert.deepEqual(DIRECTIONS, ["left", "right"]);

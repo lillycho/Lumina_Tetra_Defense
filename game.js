@@ -5,6 +5,11 @@ import {
   MATERIALS,
   shapeCells
 } from "./core.js";
+import {
+  ART_ASSETS,
+  blockAssetForState,
+  directionIcon
+} from "./art-assets.js";
 
 const $ = (selector) => document.querySelector(selector);
 const elements = {
@@ -32,6 +37,58 @@ let selectedCard = null;
 let previewAnchor = null;
 let pendingEvent = null;
 let modalLocked = false;
+let visualEffects = [];
+
+const assetUrl = (path) => `url("${path}")`;
+
+function applyArtTheme() {
+  document.documentElement.style.setProperty("--stage-art", assetUrl(ART_ASSETS.background.stage));
+  document.documentElement.style.setProperty("--castle-art", assetUrl(ART_ASSETS.castle.idle));
+  document.documentElement.style.setProperty("--castle-hit-art", assetUrl(ART_ASSETS.castle.hit));
+  document.documentElement.style.setProperty("--card-blueprint-art", assetUrl(ART_ASSETS.cards.blueprint));
+  document.documentElement.style.setProperty("--card-event-art", assetUrl(ART_ASSETS.cards.event));
+}
+
+function tileAsset(depth) {
+  if (depth === 0) return ART_ASSETS.tiles.entrance;
+  if (depth === 10) return ART_ASSETS.tiles.spawn;
+  return ART_ASSETS.tiles.field;
+}
+
+function enemyVisualState(lane, enemy) {
+  if (lane.frozen > 0) return "idle";
+  if (enemy.depth === 0 || lane.blocks[enemy.depth - 1]?.[enemy.col]) return "attack";
+  return "move";
+}
+
+function snapshotEnemies() {
+  const snapshot = new Map();
+  for (const direction of DIRECTIONS) {
+    for (const enemy of game.lanes[direction].enemies) {
+      snapshot.set(enemy, { direction, col: enemy.col, depth: enemy.depth });
+    }
+  }
+  return snapshot;
+}
+
+function trackVisualRemovals(action) {
+  const before = snapshotEnemies();
+  const result = action();
+  const live = new Set(DIRECTIONS.flatMap((direction) => game.lanes[direction].enemies));
+  const vanished = [...before].filter(([enemy]) => !live.has(enemy)).map(([, effect]) => ({
+    ...effect,
+    id: `${Date.now()}-${Math.random().toString(16).slice(2)}`
+  }));
+  if (vanished.length) {
+    visualEffects.push(...vanished);
+    setTimeout(() => {
+      const vanishedIds = new Set(vanished.map((effect) => effect.id));
+      visualEffects = visualEffects.filter((effect) => !vanishedIds.has(effect.id));
+      render();
+    }, 480);
+  }
+  return result;
+}
 
 function freshGame() {
   const querySeed = new URLSearchParams(location.search).get("seed");
@@ -40,6 +97,7 @@ function freshGame() {
   selectedCard = null;
   previewAnchor = null;
   pendingEvent = null;
+  visualEffects = [];
   closeModal(true);
   render();
 }
@@ -51,25 +109,38 @@ function makeCell(direction, col, depth, previewSet, previewMaterial) {
   cell.dataset.cellDirection = direction;
   cell.dataset.cellColumn = String(col);
   cell.dataset.cellDepth = String(depth);
+  cell.style.setProperty("--tile-art", assetUrl(tileAsset(depth)));
   if (depth === 0) cell.classList.add("entrance");
   if (depth === 10) cell.classList.add("spawn");
   if (previewSet.has(`${col}:${depth}`)) {
     cell.classList.add("preview", `ghost-${previewMaterial}`);
+    cell.style.setProperty("--hover-art", assetUrl(ART_ASSETS.tiles.hoverValid));
     cell.title = "클릭하여 이 위치에 배치";
   }
   const block = depth < 10 ? lane.blocks[depth][col] : null;
   if (block) {
     cell.classList.add("block", block.material);
+    cell.style.setProperty("--block-art", assetUrl(blockAssetForState(block)));
     cell.textContent = block.hp;
     cell.title = `${MATERIALS[block.material].label} HP ${block.hp}/${block.maxHp}`;
   }
   const enemy = lane.enemies.find((item) => item.col === col && item.depth === depth);
   if (enemy) {
+    const state = enemyVisualState(lane, enemy);
     const marker = document.createElement("span");
-    marker.className = "enemy";
+    marker.className = `enemy enemy-fragment enemy-${state}`;
+    marker.style.setProperty("--enemy-sheet", assetUrl(ART_ASSETS.enemies.fragment[state]));
     marker.title = "조각 마물";
     cell.append(marker);
   }
+  visualEffects
+    .filter((effect) => effect.direction === direction && effect.col === col && effect.depth === depth)
+    .forEach(() => {
+      const effectMarker = document.createElement("span");
+      effectMarker.className = "enemy enemy-fragment enemy-vanish enemy-effect";
+      effectMarker.style.setProperty("--enemy-sheet", assetUrl(ART_ASSETS.enemies.fragment.vanish));
+      cell.append(effectMarker);
+    });
   if (depth === 10 && lane.queue[col] > 0) {
     const queue = document.createElement("span");
     queue.className = "queue-count";
@@ -151,7 +222,10 @@ function renderHearts() {
   for (let index = 0; index < game.castleHp; index += 1) {
     const heart = document.createElement("span");
     heart.className = `heart ${index >= 3 ? "bonus" : ""}`;
-    heart.textContent = "♥";
+    const icon = document.createElement("img");
+    icon.src = ART_ASSETS.icons.heartFull;
+    icon.alt = "";
+    heart.append(icon);
     elements.hearts.append(heart);
   }
 }
@@ -203,7 +277,7 @@ function renderHand() {
     button.dataset.cardIndex = String(index);
     const top = document.createElement("div");
     top.className = "card-top";
-    top.innerHTML = `<span class="material-label">${MATERIALS[card.material].label} ${card.shape}</span><span class="card-direction">${DIRECTION_LABELS[card.direction]} 전선</span>`;
+    top.innerHTML = `<span class="material-label">${MATERIALS[card.material].label} ${card.shape}</span><span class="card-direction"><img class="direction-icon" src="${directionIcon(card.direction)}" alt="${DIRECTION_LABELS[card.direction]}"></span>`;
     const bottom = document.createElement("div");
     bottom.className = "card-bottom";
     bottom.innerHTML = `<span>HP ${MATERIALS[card.material].hp}</span><span>${card.rotation * 90}°</span>`;
@@ -237,6 +311,7 @@ function renderGauge() {
   for (let index = 0; index < 3; index += 1) {
     const dot = document.createElement("span");
     dot.className = `merge-dot ${index < game.mergeProgress ? "on" : ""}`;
+    dot.style.setProperty("--merge-icon", assetUrl(index < game.mergeProgress ? ART_ASSETS.icons.mergeChargeOn : ART_ASSETS.icons.mergeChargeOff));
     elements.gauge.append(dot);
   }
 }
@@ -254,6 +329,7 @@ function render() {
   elements.turn.textContent = `${game.turn} / ${game.maxTurns}`;
   elements.rotations.textContent = `${game.rotations} / 10`;
   elements.seed.textContent = `SEED ${game.seed}`;
+  document.body.classList.toggle("castle-hit", game.castleHp <= 1);
   elements.rotate.disabled = selectedCard === null || game.rotations <= 0 || game.status !== "playing" || pendingEvent;
   elements.pass.disabled = game.status !== "playing" || Boolean(pendingEvent);
   renderHearts();
@@ -270,7 +346,7 @@ function render() {
 function selectHandCard(index) {
   if (game.status !== "playing") return;
   if (pendingEvent) {
-    const result = game.useEvent(pendingEvent.index, index);
+    const result = trackVisualRemovals(() => game.useEvent(pendingEvent.index, index));
     pendingEvent = null;
     elements.instruction.textContent = result.ok ? "이벤트 카드가 적용되었습니다." : result.message;
     render();
@@ -286,7 +362,7 @@ function selectHandCard(index) {
 
 function placeSelected(col) {
   if (selectedCard === null) return;
-  const result = game.placeCard(selectedCard, col);
+  const result = trackVisualRemovals(() => game.placeCard(selectedCard, col));
   elements.instruction.textContent = result.ok ? "턴 처리가 완료되었습니다. 다음 설계도를 선택하세요." : result.message;
   selectedCard = null;
   previewAnchor = null;
@@ -306,7 +382,7 @@ function beginEvent(index) {
   const card = game.inventory[index];
   if (!card || game.status !== "playing") return;
   if (card.target === "none") {
-    const result = game.useEvent(index);
+    const result = trackVisualRemovals(() => game.useEvent(index));
     elements.instruction.textContent = result.ok ? `「${card.name}」 효과가 적용되었습니다.` : result.message;
     render();
     return;
@@ -327,7 +403,7 @@ function beginEvent(index) {
     button.className = "target-button";
     button.textContent = `${DIRECTION_LABELS[direction]} 전선 · 위협 ${game.threat(direction)}`;
     button.addEventListener("click", () => {
-      const result = game.useEvent(index, direction);
+      const result = trackVisualRemovals(() => game.useEvent(index, direction));
       closeModal(true);
       elements.instruction.textContent = result.ok ? `「${card.name}」 효과가 적용되었습니다.` : result.message;
       render();
@@ -398,7 +474,7 @@ function showHelp() {
 
 elements.rotate.addEventListener("click", rotateSelected);
 elements.pass.addEventListener("click", () => {
-  if (game.pass()) {
+  if (trackVisualRemovals(() => game.pass())) {
     selectedCard = null;
     previewAnchor = null;
     elements.instruction.textContent = "턴을 넘겼습니다.";
@@ -414,4 +490,5 @@ document.addEventListener("keydown", (event) => {
   if (event.key === "Escape") closeModal();
 });
 
+applyArtTheme();
 freshGame();
