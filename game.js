@@ -42,7 +42,14 @@ const elements = {
     lina: $("#intro-character-lina"),
     momo: $("#intro-character-momo"),
     sera: $("#intro-character-sera")
-  }
+  },
+  tutorialOverlay: $("#tutorial-overlay"),
+  tutorialImage: $("#tutorial-image"),
+  tutorialPage: $("#tutorial-page"),
+  tutorialTitle: $("#tutorial-title"),
+  tutorialBody: $("#tutorial-body"),
+  tutorialTip: $("#tutorial-tip"),
+  tutorialPrompt: $("#tutorial-prompt")
 };
 
 let game;
@@ -54,6 +61,7 @@ let visualEffects = [];
 let introStep = "hidden";
 let introDialogueIndex = 0;
 let introTimer = null;
+let tutorialIndex = 0;
 
 const INTRO_NARRATION = [
   "별가루가 내려앉은 밤, 루미나 공방성의 좌우에 푸른 균열이 열렸다.",
@@ -71,6 +79,30 @@ const INTRO_DIALOGUE = [
   { speaker: "모모", character: "momo", text: "당연하지. 먼지는 좀 먹었지만, 고대 방어 기하학의 품위는 멀쩡해." },
   { speaker: "세라", character: "sera", text: "내가 마력로를 붙잡고 있을게. 리나, 방어선은 네가 세워." },
   { speaker: "리나", character: "lina", text: "좋아. 기사단이 오기 전까지, 루미나 공방성은 우리가 지킨다!" }
+];
+
+const TUTORIAL_PAGES = [
+  {
+    image: ART_ASSETS.tutorial.battlefield,
+    alt: "좌우 전선, 중앙 성, 적 출현 예고가 보이는 전체 전장 화면",
+    title: "방어 작전",
+    body: "좌우 균열에서 틈새 조각들이 몰려옵니다.\n성 중앙까지 도달하기 전에 양쪽 전선에 방어 블럭을 세워주세요.",
+    tip: "목표: 30턴 동안 루미나 공방성 지키기"
+  },
+  {
+    image: ART_ASSETS.tutorial.blueprint,
+    alt: "설계도 카드를 선택해 오른쪽 전선의 배치 가능 칸이 파랗게 표시된 화면",
+    title: "설계도 투입",
+    body: "설계도 카드를 선택하면 배치할 수 있는 전선과 위치가 표시됩니다.\n파랗게 빛나는 칸을 클릭해 블럭을 내려놓으세요.",
+    tip: "카드의 방향 아이콘을 보면 어느 전선에 놓을지 알 수 있습니다."
+  },
+  {
+    image: ART_ASSETS.tutorial.mergeEvent,
+    alt: "블럭 배치 후 합성폭발 게이지와 이벤트 카드 영역이 함께 보이는 화면",
+    title: "마력로 반응",
+    body: "같은 재질 블럭이 2×2로 모이면 더 강한 블럭으로 합성됩니다.\n합성이 쌓이면 마력로가 반응해 비상 이벤트 카드를 만들어냅니다.",
+    tip: "이벤트 카드는 위급한 전선을 되돌릴 수 있는 마지막 한 수입니다."
+  }
 ];
 
 const assetUrl = (path) => `url("${path}")`;
@@ -150,6 +182,7 @@ function startIntro() {
   elements.introOverlay.classList.remove("dialogue-mode");
   elements.introCaption.classList.add("hidden");
   elements.introCharacters.classList.add("hidden");
+  elements.tutorialOverlay.classList.add("hidden");
   Object.values(elements.introPortraits).forEach((portrait) => portrait.classList.remove("speaking", "dimmed"));
   introTimer = setTimeout(() => showNarration(), 2000);
 }
@@ -202,6 +235,34 @@ function advanceIntro() {
   introStep = "hidden";
   elements.introOverlay.classList.remove("dialogue-mode");
   elements.introOverlay.classList.add("hidden");
+  startTutorial();
+}
+
+function startTutorial() {
+  tutorialIndex = 0;
+  elements.tutorialOverlay.classList.remove("hidden");
+  showTutorialPage();
+}
+
+function showTutorialPage() {
+  const page = TUTORIAL_PAGES[tutorialIndex];
+  elements.tutorialImage.src = page.image;
+  elements.tutorialImage.alt = page.alt;
+  elements.tutorialPage.textContent = `${tutorialIndex + 1} / ${TUTORIAL_PAGES.length}`;
+  elements.tutorialTitle.textContent = page.title;
+  elements.tutorialBody.textContent = page.body;
+  elements.tutorialTip.textContent = page.tip;
+  elements.tutorialPrompt.textContent = tutorialIndex === TUTORIAL_PAGES.length - 1 ? "클릭해서 방어 시작" : "클릭해서 계속";
+}
+
+function advanceTutorial() {
+  if (elements.tutorialOverlay.classList.contains("hidden")) return;
+  tutorialIndex += 1;
+  if (tutorialIndex < TUTORIAL_PAGES.length) {
+    showTutorialPage();
+    return;
+  }
+  elements.tutorialOverlay.classList.add("hidden");
 }
 
 function makeCell(direction, col, depth, previewSet, previewMaterial) {
@@ -539,10 +600,13 @@ function showRewardModal() {
 
 function showResult() {
   const won = game.status === "won";
+  const resultImage = won ? ART_ASSETS.endings.success : ART_ASSETS.endings.failure;
+  const resultAlt = won ? "맑은 날 성 앞에서 기뻐하는 리나, 모모, 세라" : "귀여운 틈새 조각들에게 둘러싸여 당황한 리나, 모모, 세라";
   openModal(won ? "DEFENSE COMPLETE" : "WORKSHOP FALLEN", won ? "방어 성공!" : "방어 실패", "", true);
+  elements.modal.classList.add("result-modal");
   elements.modalContent.innerHTML = `
-    <p>${won ? "루미나 공방성은 마지막 파도까지 버텨냈습니다." : "마력로가 꺼졌지만, 다음 설계는 더 단단해질 겁니다."}</p>
-    <div class="result-stat"><div><span>도달 턴</span><br><strong>${game.turn}</strong></div><div><span>성 HP</span><br><strong>${game.castleHp}</strong></div></div>
+    <img class="result-frame" src="${resultImage}" alt="${resultAlt}">
+    <p class="result-message">${won ? "루미나 공방성은 마지막 파도까지 버텨냈습니다." : "마력로가 꺼졌지만, 다음 설계는 더 단단해질 겁니다."}</p>
     <button id="result-restart" class="primary-button" type="button">새 방어 시작</button>`;
   $("#result-restart").addEventListener("click", freshGame);
 }
@@ -553,6 +617,7 @@ function openModal(kicker, title, paragraph = "", locked = false) {
   elements.modalTitle.textContent = title;
   elements.modalContent.innerHTML = paragraph ? `<p>${paragraph}</p>` : "";
   elements.modalClose.hidden = locked;
+  elements.modal.classList.remove("result-modal");
   elements.modal.classList.remove("hidden");
 }
 
@@ -588,12 +653,18 @@ elements.pass.addEventListener("click", () => {
 $("#restart-button").addEventListener("click", freshGame);
 $("#help-button").addEventListener("click", showHelp);
 elements.introOverlay.addEventListener("click", advanceIntro);
+elements.tutorialOverlay.addEventListener("click", advanceTutorial);
 elements.modalClose.addEventListener("click", () => closeModal());
 elements.modal.addEventListener("click", (event) => { if (event.target === elements.modal) closeModal(); });
 document.addEventListener("keydown", (event) => {
   if (!elements.introOverlay.classList.contains("hidden") && (event.key === " " || event.key === "Enter")) {
     event.preventDefault();
     advanceIntro();
+    return;
+  }
+  if (!elements.tutorialOverlay.classList.contains("hidden") && (event.key === " " || event.key === "Enter")) {
+    event.preventDefault();
+    advanceTutorial();
     return;
   }
   if (event.key.toLowerCase() === "r" && elements.modal.classList.contains("hidden")) rotateSelected();

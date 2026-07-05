@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta name="theme-color" content="#121a31">
   <title>루미나 테트라 디펜스</title>
-  <link rel="stylesheet" href="styles.css?v=20260706-intro-vn">
+  <link rel="stylesheet" href="styles.css?v=20260706-tutorial">
 </head>
 <body>
   <div class="stars" aria-hidden="true"></div>
@@ -87,6 +87,21 @@
       <p id="intro-text" class="intro-text"></p>
       <small id="intro-prompt" class="intro-prompt">클릭해서 계속</small>
     </div>
+  </section>
+
+  <section id="tutorial-overlay" class="tutorial-overlay hidden" aria-label="방어 작전 튜토리얼">
+    <article class="tutorial-card">
+      <figure class="tutorial-shot">
+        <img id="tutorial-image" class="tutorial-image" alt="">
+      </figure>
+      <div class="tutorial-copy">
+        <p id="tutorial-page" class="tutorial-page">1 / 3</p>
+        <h2 id="tutorial-title"></h2>
+        <p id="tutorial-body" class="tutorial-body"></p>
+        <p id="tutorial-tip" class="tutorial-tip"></p>
+        <small id="tutorial-prompt" class="tutorial-prompt">클릭해서 계속</small>
+      </div>
+    </article>
   </section>
 
   <div id="modal" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="modal-title">

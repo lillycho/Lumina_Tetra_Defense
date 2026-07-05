@@ -8,6 +8,15 @@ export const ART_ASSETS = {
     momo: "assets/art/characters/portraits/character_momo_standing.png",
     sera: "assets/art/characters/portraits/character_sera_standing.png"
   },
+  endings: {
+    success: "assets/art/endings/result_frame_success.png",
+    failure: "assets/art/endings/result_frame_failure.png"
+  },
+  tutorial: {
+    battlefield: "assets/art/tutorial/tutorial_01_battlefield.png",
+    blueprint: "assets/art/tutorial/tutorial_02_blueprint.png",
+    mergeEvent: "assets/art/tutorial/tutorial_03_merge_event.png"
+  },
   tiles: {
     field: "assets/art/tiles/tile_field.png",
     entrance: "assets/art/tiles/tile_entrance.png",

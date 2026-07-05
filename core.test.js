@@ -29,6 +29,8 @@ test("현재 사용하기로 한 아트 에셋 매니페스트가 실제 파일�
     ART_ASSETS.tiles.hoverInvalid,
     ART_ASSETS.cards.blueprint,
     ART_ASSETS.cards.event,
+    ...Object.values(ART_ASSETS.tutorial),
+    ...Object.values(ART_ASSETS.endings),
     ...Object.values(ART_ASSETS.icons),
     ...Object.values(ART_ASSETS.blocks).flatMap((states) => Object.values(states))
   ];
@@ -113,6 +115,55 @@ test("게임 시작 전 나레이션과 비주얼 노벨 대화 화면을 가진
   assert.match(gameJs, /INTRO_NARRATION\.forEach/);
   assert.match(gameJs, /setTimeout\(\(\)\s*=>\s*showNarration\(\),\s*2000\)/);
   assert.match(gameJs, /advanceIntro/);
+});
+
+test("승리와 패배 결과 오버레이는 각각의 결과 이미지를 함께 보여준다", () => {
+  const css = readFileSync(fileURLToPath(new URL("./styles.css", import.meta.url)), "utf8");
+  const gameJs = readFileSync(fileURLToPath(new URL("./game.js", import.meta.url)), "utf8");
+
+  assert.equal(existsSync(fileURLToPath(new URL(ART_ASSETS.endings.success, import.meta.url))), true);
+  assert.equal(existsSync(fileURLToPath(new URL(ART_ASSETS.endings.failure, import.meta.url))), true);
+  assert.match(gameJs, /class="result-frame"/);
+  assert.match(gameJs, /class="result-message"/);
+  assert.equal(gameJs.includes('class="result-stat"'), false);
+  assert.equal(gameJs.includes("도달 턴"), false);
+  assert.match(gameJs, /ART_ASSETS\.endings\.success/);
+  assert.match(gameJs, /ART_ASSETS\.endings\.failure/);
+  assert.match(gameJs, /modal\.classList\.add\("result-modal"\)/);
+  assert.match(cssRule(css, ".modal.result-modal"), /overflow:\s*hidden/);
+  const resultModalRule = cssRule(css, ".modal.result-modal .modal-card");
+  assert.match(resultModalRule, /overflow:\s*hidden/);
+  assert.match(resultModalRule, /text-align:\s*center/);
+  assert.match(cssRule(css, ".result-frame"), /width:\s*100%/);
+  assert.match(cssRule(css, ".result-frame"), /image-rendering:\s*pixelated/);
+  assert.match(cssRule(css, ".result-message"), /font-size:\s*67%/);
+});
+
+test("대화 후 클릭으로 넘기는 3페이지 튜토리얼을 보여준다", () => {
+  const html = readFileSync(fileURLToPath(new URL("./index.html", import.meta.url)), "utf8");
+  const css = readFileSync(fileURLToPath(new URL("./styles.css", import.meta.url)), "utf8");
+  const gameJs = readFileSync(fileURLToPath(new URL("./game.js", import.meta.url)), "utf8");
+
+  for (const assetPath of Object.values(ART_ASSETS.tutorial)) {
+    assert.equal(existsSync(fileURLToPath(new URL(assetPath, import.meta.url))), true, assetPath);
+  }
+  assert.match(html, /id="tutorial-overlay"/);
+  assert.match(html, /id="tutorial-image"/);
+  assert.match(html, /id="tutorial-page"/);
+  assert.match(cssRule(css, ".tutorial-overlay"), /backdrop-filter:\s*blur\(8px\)/);
+  assert.match(cssRule(css, ".tutorial-card"), /grid-template-columns:\s*minmax\(0,\s*1\.25fr\)\s+minmax\(320px,\s*\.75fr\)/);
+  assert.match(cssRule(css, ".tutorial-image"), /object-fit:\s*cover/);
+  assert.match(cssRule(css, ".tutorial-copy h2"), /font-size:\s*clamp\(21px,\s*2vw,\s*31px\)/);
+  assert.match(cssRule(css, ".tutorial-body"), /font-size:\s*clamp\(13px,\s*1\.15vw,\s*17px\)/);
+  assert.match(cssRule(css, ".event-card strong"), /font-size:\s*15px/);
+  assert.match(cssRule(css, ".event-card span"), /line-height:\s*1\.15/);
+  assert.match(gameJs, /TUTORIAL_PAGES/);
+  assert.match(gameJs, /startTutorial/);
+  assert.match(gameJs, /advanceTutorial/);
+  assert.match(gameJs, /tutorialIndex\s*<\s*TUTORIAL_PAGES\.length/);
+  assert.match(gameJs, /title:\s*"마력로 반응"/);
+  assert.doesNotMatch(gameJs, /title:\s*"[^"]+\s+[123]\/3"/);
+  assert.match(gameJs, /같은 재질 블럭이 2×2로 모이면/);
 });
 
 test("전선은 왼쪽과 오른쪽 두 방향만 사용한다", () => {
