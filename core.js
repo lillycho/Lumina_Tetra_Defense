@@ -1,10 +1,8 @@
+import { GAME_BALANCE } from "./game-balance.js";
+
 export const DIRECTIONS = ["left", "right"];
 export const DIRECTION_LABELS = { left: "왼쪽", right: "오른쪽" };
-export const MATERIALS = {
-  wood: { label: "나무", hp: 2, weight: 90 },
-  stone: { label: "돌", hp: 3, weight: 9 },
-  iron: { label: "철", hp: 4, weight: 1 }
-};
+export const MATERIALS = GAME_BALANCE.materials;
 export const SHAPES = {
   I: [[0, 0], [1, 0], [2, 0], [3, 0]],
   T: [[0, 0], [1, 0], [2, 0], [1, 1]],
@@ -15,26 +13,26 @@ export const SHAPES = {
 };
 
 export const EVENT_CARDS = [
-  { id: "rotation", name: "회전 폭주", description: "남은 회전 +3", target: "none" },
-  { id: "repairCastle", name: "왕실 수복", description: "성 HP +1 (최대 5)", target: "none" },
-  { id: "redraw", name: "완전 재설계", description: "현재 손패 4장 교체", target: "none" },
+  { id: "rotation", name: "회전 폭주", description: `남은 회전 +${GAME_BALANCE.events.rotationGain}`, target: "none" },
+  { id: "repairCastle", name: "왕실 수복", description: `성 HP +${GAME_BALANCE.events.repairCastleAmount} (최대 ${GAME_BALANCE.events.repairCastleMaxHp})`, target: "none" },
+  { id: "redraw", name: "완전 재설계", description: `현재 손패 ${GAME_BALANCE.stage.handSize}장 교체`, target: "none" },
   { id: "ironCard", name: "철 카드 각성", description: "선택 일반 카드를 철로 변경", target: "card" },
   { id: "stoneCard", name: "석재 보급", description: "선택 나무 카드를 돌로 변경", target: "card" },
   { id: "sync", name: "위협 동기화", description: "선택 카드 방향을 최위험 전선으로", target: "card" },
-  { id: "freezeAll", name: "시간 정지", description: "다음 적 이동 전체 무시", target: "none" },
-  { id: "freezeLane", name: "전선 빙결", description: "선택 전선 적 이동 1회 무시", target: "direction" },
-  { id: "push", name: "밀어내기", description: "선택 전선 적을 1칸 후퇴", target: "direction" },
+  { id: "freezeAll", name: "시간 정지", description: `다음 적 이동 전체 ${GAME_BALANCE.events.freezeTurns}회 무시`, target: "none" },
+  { id: "freezeLane", name: "전선 빙결", description: `선택 전선 적 이동 ${GAME_BALANCE.events.freezeTurns}회 무시`, target: "direction" },
+  { id: "push", name: "밀어내기", description: `선택 전선 적을 ${GAME_BALANCE.events.enemyPushDistance}칸 후퇴`, target: "direction" },
   { id: "compress", name: "전선 압축", description: "블럭을 적 방향으로 정렬", target: "direction" },
-  { id: "repairLane", name: "긴급 보수", description: "선택 전선 블럭 HP +1", target: "direction" },
-  { id: "forge", name: "왕실 대장간", description: "모든 블럭 HP +1", target: "none" },
-  { id: "dropIron", name: "철벽 투하", description: "바깥 빈칸 2개에 철 설치", target: "direction" },
-  { id: "woodRain", name: "목재 폭우", description: "바깥 빈칸 4개에 나무 설치", target: "direction" },
-  { id: "catalyst", name: "합성 촉매", description: "다음 합성 결과 HP +1", target: "none" },
+  { id: "repairLane", name: "긴급 보수", description: `선택 전선 블럭 HP +${GAME_BALANCE.events.blockHpBoost}`, target: "direction" },
+  { id: "forge", name: "왕실 대장간", description: `모든 블럭 HP +${GAME_BALANCE.events.blockHpBoost}`, target: "none" },
+  { id: "dropIron", name: "철벽 투하", description: `바깥 빈칸 ${GAME_BALANCE.events.dropIronCount}개에 철 설치`, target: "direction" },
+  { id: "woodRain", name: "목재 폭우", description: `바깥 빈칸 ${GAME_BALANCE.events.woodRainCount}개에 나무 설치`, target: "direction" },
+  { id: "catalyst", name: "합성 촉매", description: `다음 합성 결과 HP +${GAME_BALANCE.merge.catalystHpBonus}`, target: "none" },
   { id: "mergeNow", name: "즉시 연쇄합성", description: "선택 전선 합성 즉시 실행", target: "direction" },
   { id: "remove", name: "선봉 제거", description: "성에 가장 가까운 적 제거", target: "direction" },
   { id: "burnQueue", name: "대기열 소각", description: "선택 전선 대기 적 제거", target: "direction" },
   { id: "ironFestival", name: "철의 축제", description: "현재 손패를 모두 철로 변경", target: "none" },
-  { id: "gateSeal", name: "성문 봉쇄", description: "전선 정지 + 블럭 HP +1", target: "direction" }
+  { id: "gateSeal", name: "성문 봉쇄", description: `전선 정지 + 블럭 HP +${GAME_BALANCE.events.blockHpBoost}`, target: "direction" }
 ];
 
 export function mulberry32(seed) {
@@ -66,9 +64,9 @@ export function shapeCells(shape, rotation = 0) {
 
 function createLane() {
   return {
-    blocks: Array.from({ length: 10 }, () => Array(6).fill(null)),
+    blocks: Array.from({ length: GAME_BALANCE.lanes.defenseDepth }, () => Array(GAME_BALANCE.lanes.width).fill(null)),
     enemies: [],
-    queue: Array(6).fill(0),
+    queue: Array(GAME_BALANCE.lanes.width).fill(0),
     frozen: 0
   };
 }
@@ -83,9 +81,9 @@ export class GameState {
     this.seed = seed;
     this.rng = mulberry32(seed);
     this.turn = 1;
-    this.maxTurns = 20;
-    this.castleHp = 3;
-    this.rotations = 10;
+    this.maxTurns = GAME_BALANCE.stage.clearTurn;
+    this.castleHp = GAME_BALANCE.stage.initialCastleHp;
+    this.rotations = GAME_BALANCE.stage.initialRotations;
     this.mergeProgress = 0;
     this.globalFreeze = 0;
     this.mergeCatalyst = 0;
@@ -95,7 +93,7 @@ export class GameState {
     this.inventory = [];
     this.rewardChoices = null;
     this.pendingRewards = 0;
-    this.preview = [1, 2, 3].map((turn) => this.generateSpawn(turn));
+    this.preview = Array.from({ length: GAME_BALANCE.stage.previewTurns }, (_, index) => this.generateSpawn(index + 1));
     this.logs = ["루미나 공방성 방어를 시작합니다."];
   }
 
@@ -104,8 +102,14 @@ export class GameState {
   }
 
   weightedMaterial() {
-    const roll = this.rng() * 100;
-    return roll < 90 ? "wood" : roll < 99 ? "stone" : "iron";
+    const entries = Object.entries(MATERIALS);
+    const totalWeight = entries.reduce((sum, [, material]) => sum + material.weight, 0);
+    let roll = this.rng() * totalWeight;
+    for (const [key, material] of entries) {
+      if (roll < material.weight) return key;
+      roll -= material.weight;
+    }
+    return entries.at(-1)[0];
   }
 
   drawCard() {
@@ -119,19 +123,18 @@ export class GameState {
   }
 
   drawHand() {
-    return Array.from({ length: 4 }, () => this.drawCard());
+    return Array.from({ length: GAME_BALANCE.stage.handSize }, () => this.drawCard());
   }
 
   spawnCount(turn) {
-    if (turn <= 5) return 1;
-    if (turn <= 13) return 2;
-    return turn % 3 === 0 ? 3 : 2;
+    const segment = GAME_BALANCE.spawnCurve.find(({ fromTurn, toTurn }) => turn >= fromTurn && turn <= toTurn) ?? GAME_BALANCE.spawnCurve.at(-1);
+    return segment.count + (segment.bonusEvery && turn % segment.bonusEvery === 0 ? segment.bonusCount : 0);
   }
 
   generateSpawn(turn) {
     return Array.from({ length: this.spawnCount(turn) }, () => ({
       direction: this.randomItem(DIRECTIONS),
-      col: Math.floor(this.rng() * 6)
+      col: Math.floor(this.rng() * GAME_BALANCE.lanes.width)
     }));
   }
 
@@ -143,7 +146,7 @@ export class GameState {
     return cells.every(([x, y]) => {
       const col = anchorCol + x;
       const depth = anchorDepth + y;
-      return col >= 0 && col < 6 && depth >= 0 && depth < 10 && !lane.blocks[depth][col] && !this.enemiesAt(lane, col, depth);
+      return col >= 0 && col < GAME_BALANCE.lanes.width && depth >= 0 && depth < GAME_BALANCE.lanes.defenseDepth && !lane.blocks[depth][col] && !this.enemiesAt(lane, col, depth);
     });
   }
 
@@ -157,7 +160,7 @@ export class GameState {
   }
 
   validAnchors(card) {
-    return Array.from({ length: 6 }, (_, col) => col).filter((col) => this.getPlacement(card, col));
+    return Array.from({ length: GAME_BALANCE.lanes.width }, (_, col) => col).filter((col) => this.getPlacement(card, col));
   }
 
   rotateCard(index) {
@@ -192,8 +195,8 @@ export class GameState {
     const lane = this.lanes[direction];
     const used = new Set();
     const matches = [];
-    for (let depth = 0; depth < 9; depth += 1) {
-      for (let col = 0; col < 5; col += 1) {
+    for (let depth = 0; depth < GAME_BALANCE.lanes.defenseDepth - 1; depth += 1) {
+      for (let col = 0; col < GAME_BALANCE.lanes.width - 1; col += 1) {
         const keys = [[depth, col], [depth, col + 1], [depth + 1, col], [depth + 1, col + 1]];
         if (keys.some(([d, c]) => used.has(`${d}:${c}`))) continue;
         const blocks = keys.map(([d, c]) => lane.blocks[d][c]);
@@ -206,15 +209,15 @@ export class GameState {
     for (const match of matches) {
       match.keys.forEach(([depth, col]) => { lane.blocks[depth][col] = null; });
       const result = match.material === "wood" ? "stone" : "iron";
-      lane.blocks[match.depth + 1][match.col] = makeBlock(result, this.mergeCatalyst ? 1 : 0);
-      lane.blocks[match.depth + 1][match.col + 1] = makeBlock(result, this.mergeCatalyst ? 1 : 0);
+      lane.blocks[match.depth + 1][match.col] = makeBlock(result, this.mergeCatalyst ? GAME_BALANCE.merge.catalystHpBonus : 0);
+      lane.blocks[match.depth + 1][match.col + 1] = makeBlock(result, this.mergeCatalyst ? GAME_BALANCE.merge.catalystHpBonus : 0);
     }
     if (matches.length) {
       this.mergeCatalyst = 0;
       this.applyOutwardGravity(direction);
       this.mergeProgress += matches.length;
-      this.pendingRewards += Math.floor(this.mergeProgress / 3);
-      this.mergeProgress %= 3;
+      this.pendingRewards += Math.floor(this.mergeProgress / GAME_BALANCE.merge.rewardThreshold);
+      this.mergeProgress %= GAME_BALANCE.merge.rewardThreshold;
       this.log(`${DIRECTION_LABELS[direction]} 전선에서 합성 ${matches.length}회가 발생했습니다.`);
     }
     return matches.length;
@@ -225,8 +228,8 @@ export class GameState {
     let moved = true;
     while (moved) {
       moved = false;
-      for (let depth = 8; depth >= 0; depth -= 1) {
-        for (let col = 0; col < 6; col += 1) {
+      for (let depth = GAME_BALANCE.lanes.defenseDepth - 2; depth >= 0; depth -= 1) {
+        for (let col = 0; col < GAME_BALANCE.lanes.width; col += 1) {
           if (lane.blocks[depth][col] && !lane.blocks[depth + 1][col] && !this.enemiesAt(lane, col, depth + 1)) {
             lane.blocks[depth + 1][col] = lane.blocks[depth][col];
             lane.blocks[depth][col] = null;
@@ -241,7 +244,7 @@ export class GameState {
     if (!this.pendingRewards || this.rewardChoices) return null;
     const pool = [...EVENT_CARDS];
     const choices = [];
-    while (choices.length < 3) choices.push(pool.splice(Math.floor(this.rng() * pool.length), 1)[0]);
+    while (choices.length < GAME_BALANCE.rewards.choiceCount) choices.push(pool.splice(Math.floor(this.rng() * pool.length), 1)[0]);
     this.rewardChoices = choices;
     return choices;
   }
@@ -266,13 +269,13 @@ export class GameState {
     }
     if (this.turn >= this.maxTurns) {
       this.status = "won";
-      this.log("20턴 방어 성공! 루미나 공방성을 지켜냈습니다.");
+      this.log(`${this.maxTurns}턴 방어 성공! 루미나 공방성을 지켜냈습니다.`);
       return;
     }
     this.turn += 1;
     this.hand = this.drawHand();
     this.preview.shift();
-    this.preview.push(this.generateSpawn(this.turn + 2));
+    this.preview.push(this.generateSpawn(this.turn + GAME_BALANCE.stage.previewTurns - 1));
     this.createRewardChoices();
   }
 
@@ -316,10 +319,10 @@ export class GameState {
 
   enterQueuedEnemies() {
     for (const lane of Object.values(this.lanes)) {
-      for (let col = 0; col < 6; col += 1) {
-        if (lane.queue[col] > 0 && !this.enemiesAt(lane, col, 10)) {
+      for (let col = 0; col < GAME_BALANCE.lanes.width; col += 1) {
+        if (lane.queue[col] > 0 && !this.enemiesAt(lane, col, GAME_BALANCE.lanes.defenseDepth)) {
           lane.queue[col] -= 1;
-          lane.enemies.push({ col, depth: 10 });
+          lane.enemies.push({ col, depth: GAME_BALANCE.lanes.defenseDepth });
         }
       }
     }
@@ -327,7 +330,7 @@ export class GameState {
 
   threat(direction) {
     const lane = this.lanes[direction];
-    const enemyScore = lane.enemies.reduce((sum, enemy) => sum + (11 - enemy.depth) * 4, 0);
+    const enemyScore = lane.enemies.reduce((sum, enemy) => sum + (GAME_BALANCE.lanes.defenseDepth + 1 - enemy.depth) * 4, 0);
     const queueScore = lane.queue.reduce((sum, count) => sum + count, 0);
     return enemyScore + queueScore;
   }
@@ -345,8 +348,8 @@ export class GameState {
     const selected = Number.isInteger(target) ? this.hand[target] : null;
     let success = true;
     switch (card.id) {
-      case "rotation": this.rotations += 3; break;
-      case "repairCastle": this.castleHp = Math.min(5, this.castleHp + 1); break;
+      case "rotation": this.rotations += GAME_BALANCE.events.rotationGain; break;
+      case "repairCastle": this.castleHp = Math.min(GAME_BALANCE.events.repairCastleMaxHp, this.castleHp + GAME_BALANCE.events.repairCastleAmount); break;
       case "redraw": this.hand = this.drawHand(); break;
       case "ironCard": selected.material = "iron"; break;
       case "stoneCard":
@@ -354,20 +357,20 @@ export class GameState {
         else selected.material = "stone";
         break;
       case "sync": selected.direction = this.mostDangerousDirection(); break;
-      case "freezeAll": this.globalFreeze += 1; break;
-      case "freezeLane": lane.frozen += 1; break;
+      case "freezeAll": this.globalFreeze += GAME_BALANCE.events.freezeTurns; break;
+      case "freezeLane": lane.frozen += GAME_BALANCE.events.freezeTurns; break;
       case "push": this.pushEnemies(target); break;
       case "compress": this.applyOutwardGravity(target); break;
       case "repairLane": this.boostBlocks([target]); break;
       case "forge": this.boostBlocks(DIRECTIONS); break;
-      case "dropIron": this.installOuter(target, "iron", 2); break;
-      case "woodRain": this.installOuter(target, "wood", 4); break;
+      case "dropIron": this.installOuter(target, "iron", GAME_BALANCE.events.dropIronCount); break;
+      case "woodRain": this.installOuter(target, "wood", GAME_BALANCE.events.woodRainCount); break;
       case "catalyst": this.mergeCatalyst = 1; break;
       case "mergeNow": this.mergeLane(target); this.createRewardChoices(); break;
       case "remove": this.removeClosest(target); break;
       case "burnQueue": lane.queue.fill(0); break;
       case "ironFestival": this.hand.forEach((handCard) => { handCard.material = "iron"; }); break;
-      case "gateSeal": lane.frozen += 1; this.boostBlocks([target]); break;
+      case "gateSeal": lane.frozen += GAME_BALANCE.events.freezeTurns; this.boostBlocks([target]); break;
       default: success = false;
     }
     if (!success) return { ok: false, message: "현재 대상에는 사용할 수 없습니다." };
@@ -379,7 +382,7 @@ export class GameState {
   boostBlocks(directions) {
     for (const direction of directions) {
       for (const row of this.lanes[direction].blocks) {
-        for (const block of row) if (block) { block.maxHp += 1; block.hp += 1; }
+        for (const block of row) if (block) { block.maxHp += GAME_BALANCE.events.blockHpBoost; block.hp += GAME_BALANCE.events.blockHpBoost; }
       }
     }
   }
@@ -387,8 +390,8 @@ export class GameState {
   installOuter(direction, material, count) {
     const lane = this.lanes[direction];
     let left = count;
-    for (let depth = 9; depth >= 0 && left; depth -= 1) {
-      for (let col = 0; col < 6 && left; col += 1) {
+    for (let depth = GAME_BALANCE.lanes.defenseDepth - 1; depth >= 0 && left; depth -= 1) {
+      for (let col = 0; col < GAME_BALANCE.lanes.width && left; col += 1) {
         if (!lane.blocks[depth][col] && !this.enemiesAt(lane, col, depth)) {
           lane.blocks[depth][col] = makeBlock(material);
           left -= 1;
@@ -400,8 +403,8 @@ export class GameState {
   pushEnemies(direction) {
     const lane = this.lanes[direction];
     for (const enemy of [...lane.enemies].sort((a, b) => b.depth - a.depth)) {
-      const next = enemy.depth + 1;
-      if (next <= 10 && !this.enemiesAt(lane, enemy.col, next) && (next === 10 || !lane.blocks[next][enemy.col])) enemy.depth = next;
+      const next = enemy.depth + GAME_BALANCE.events.enemyPushDistance;
+      if (next <= GAME_BALANCE.lanes.defenseDepth && !this.enemiesAt(lane, enemy.col, next) && (next === GAME_BALANCE.lanes.defenseDepth || !lane.blocks[next][enemy.col])) enemy.depth = next;
     }
   }
 
@@ -414,6 +417,6 @@ export class GameState {
 
   log(message) {
     this.logs.unshift(`T${this.turn} · ${message}`);
-    this.logs = this.logs.slice(0, 8);
+    this.logs = this.logs.slice(0, GAME_BALANCE.stage.logLimit);
   }
 }

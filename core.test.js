@@ -3,7 +3,15 @@ import assert from "node:assert/strict";
 import { existsSync, readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { DIRECTIONS, GameState, shapeCells } from "./core.js";
+import { GAME_BALANCE } from "./game-balance.js";
 import { ART_ASSETS, blockAssetForState } from "./art-assets.js";
+
+const cssRule = (css, selector) => {
+  const escaped = selector.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const match = css.match(new RegExp(`${escaped}\\s*\\{([^}]*)\\}`));
+  assert.ok(match, `${selector} rule exists`);
+  return match[1];
+};
 
 test("현재 사용하기로 한 아트 에셋 매니페스트가 실제 파일과 연결된다", () => {
   const required = [
@@ -41,16 +49,38 @@ test("UI는 둥근모 폰트와 화면 맞춤 확대 레이아웃을 사용한�
   assert.equal(existsSync(fileURLToPath(new URL("./assets/fonts/DungGeunMo.ttf", import.meta.url))), true);
   assert.match(css, /@font-face[\s\S]*font-family:\s*"DungGeunMo"/);
   assert.match(css, /font-size:\s*150%/);
+  assert.match(css, /--cell:\s*clamp\(27px,\s*2\.55vw,\s*40px\)/);
+  assert.match(css, /--castle-size:\s*clamp\(190px,\s*14vw,\s*250px\)/);
   assert.match(css, /\.topbar\s*\{[\s\S]*display:\s*none/);
   assert.match(css, /\.game-shell\s*\{[\s\S]*--ui-scale:/);
-  assert.match(css, /\.forecast-panel\s*\{[\s\S]*width:\s*240px/);
-  assert.match(css, /\.battlefield\s*\{[\s\S]*grid-column:\s*1\s*\/\s*-1/);
+  assert.match(cssRule(css, ".game-shell"), /grid-template-columns:\s*clamp\(190px,\s*15vw,\s*220px\)\s+minmax\(660px,\s*1fr\)\s+clamp\(190px,\s*15vw,\s*220px\)/);
+  assert.match(cssRule(css, ".game-shell"), /column-gap:\s*clamp\(28px,\s*3vw,\s*48px\)/);
+  const turnRule = cssRule(css, ".turn-panel");
+  assert.match(turnRule, /grid-column:\s*1/);
+  assert.match(turnRule, /grid-row:\s*2\s*\/\s*span\s*2/);
+  assert.match(turnRule, /justify-self:\s*start/);
+  assert.match(turnRule, /width:\s*210px/);
+  const forecastRule = cssRule(css, ".forecast-panel");
+  assert.match(forecastRule, /position:\s*fixed/);
+  assert.match(forecastRule, /right:\s*clamp\(14px,\s*1\.7vw,\s*28px\)/);
+  assert.match(forecastRule, /top:\s*clamp\(84px,\s*12vh,\s*130px\)/);
+  assert.match(forecastRule, /width:\s*210px/);
+  assert.match(cssRule(css, ".forecast-panel h2"), /font-size:\s*20px/);
+  assert.match(cssRule(css, ".forecast-panel .panel-heading > span"), /font-size:\s*14px/);
+  assert.match(cssRule(css, ".forecast-turn header"), /font-size:\s*14px/);
+  assert.match(cssRule(css, ".spawn-chip"), /font-size:\s*14px/);
+  assert.match(cssRule(css, ".spawn-chips"), /flex-direction:\s*column/);
   assert.match(css, /line-height:\s*1\.65/);
   assert.match(css, /\.game-shell\s*\{[\s\S]*align-content:\s*center/);
-  assert.match(css, /\.battlefield\s*\{[\s\S]*transform:\s*translateY\(-24px\)/);
+  assert.match(css, /\.game-shell\s*\{[\s\S]*grid-template-rows:\s*clamp\(28px,\s*5vh,\s*54px\)/);
+  const battlefieldRule = cssRule(css, ".battlefield");
+  assert.match(battlefieldRule, /grid-column:\s*2/);
+  assert.match(battlefieldRule, /grid-row:\s*3/);
+  assert.match(battlefieldRule, /transform:\s*none/);
   assert.match(css, /\.merge-panel\s*\{[\s\S]*justify-self:\s*center/);
   assert.match(css, /\.hand-panel\s*\{[\s\S]*justify-self:\s*center/);
   assert.match(css, /\.direction-icon\s*\{[\s\S]*width:\s*24px/);
+  assert.match(cssRule(css, ".key-button:disabled"), /opacity:\s*1/);
   assert.match(html, /<h1>루미나 테트라 디펜스<\/h1>/);
 });
 
@@ -60,6 +90,29 @@ test("설계도 카드 상단은 블럭 모양 아이콘과 전선 방향 텍스
   assert.equal(gameJs.includes("shapeIcon(card.shape)"), false);
   assert.equal(gameJs.includes("${DIRECTION_LABELS[card.direction]} 전선"), false);
   assert.match(gameJs, /class="direction-icon"/);
+});
+
+test("게임 시작 전 나레이션과 비주얼 노벨 대화 화면을 가진다", () => {
+  const html = readFileSync(fileURLToPath(new URL("./index.html", import.meta.url)), "utf8");
+  const css = readFileSync(fileURLToPath(new URL("./styles.css", import.meta.url)), "utf8");
+  const gameJs = readFileSync(fileURLToPath(new URL("./game.js", import.meta.url)), "utf8");
+
+  assert.equal(existsSync(fileURLToPath(new URL(ART_ASSETS.background.intro, import.meta.url))), true);
+  for (const portrait of Object.values(ART_ASSETS.characters)) {
+    assert.equal(existsSync(fileURLToPath(new URL(portrait, import.meta.url))), true, portrait);
+  }
+  assert.match(html, /id="intro-overlay"/);
+  assert.match(html, /id="intro-speaker"/);
+  assert.match(cssRule(css, ".intro-overlay"), /background-image:\s*var\(--intro-art\)/);
+  assert.match(cssRule(css, ".intro-caption"), /background:\s*linear-gradient/);
+  assert.match(cssRule(css, ".intro-text"), /font-size:\s*clamp\(16px,\s*1\.6vw,\s*25px\)/);
+  assert.match(cssRule(css, ".intro-character.dimmed"), /filter:\s*brightness\(\.42\)/);
+  assert.match(cssRule(css, ".intro-overlay.dialogue-mode::after"), /backdrop-filter:\s*blur\(5px\)/);
+  assert.match(gameJs, /INTRO_NARRATION/);
+  assert.match(gameJs, /INTRO_DIALOGUE/);
+  assert.match(gameJs, /INTRO_NARRATION\.forEach/);
+  assert.match(gameJs, /setTimeout\(\(\)\s*=>\s*showNarration\(\),\s*2000\)/);
+  assert.match(gameJs, /advanceIntro/);
 });
 
 test("전선은 왼쪽과 오른쪽 두 방향만 사용한다", () => {
@@ -77,6 +130,18 @@ test("재질 확률 경계는 나무 90%, 돌 9%, 철 1%다", () => {
   assert.equal(game.weightedMaterial(), "stone");
   game.rng = () => 0.99;
   assert.equal(game.weightedMaterial(), "iron");
+});
+
+test("스테이지 클리어 턴과 주요 난이도 수치는 밸런스 데이터에서 읽는다", () => {
+  const game = new GameState(9);
+
+  assert.equal(GAME_BALANCE.stage.clearTurn, 30);
+  assert.equal(game.maxTurns, GAME_BALANCE.stage.clearTurn);
+  assert.equal(game.castleHp, GAME_BALANCE.stage.initialCastleHp);
+  assert.equal(game.rotations, GAME_BALANCE.stage.initialRotations);
+  assert.equal(game.hand.length, GAME_BALANCE.stage.handSize);
+  assert.equal(game.preview.length, GAME_BALANCE.stage.previewTurns);
+  assert.equal(game.spawnCount(30), 3);
 });
 
 test("테트로미노 회전은 항상 4칸과 정규화된 좌표를 유지한다", () => {
@@ -120,9 +185,9 @@ test("적은 앞 블럭을 공격하고 파괴한 턴에는 전진하지 않는�
   assert.equal(lane.enemies[0].depth, 2);
 });
 
-test("20턴 행동을 마치고 성이 남아 있으면 승리한다", () => {
+test("30턴 행동을 마치고 성이 남아 있으면 승리한다", () => {
   const game = new GameState(4);
-  game.turn = 20;
+  game.turn = GAME_BALANCE.stage.clearTurn;
   game.castleHp = 99;
   game.preview[0] = [];
   Object.values(game.lanes).forEach((lane) => { lane.enemies = []; lane.queue.fill(0); });

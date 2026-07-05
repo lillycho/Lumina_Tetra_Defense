@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta name="theme-color" content="#121a31">
   <title>루미나 테트라 디펜스</title>
-  <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="styles.css?v=20260706-intro-vn">
 </head>
 <body>
   <div class="stars" aria-hidden="true"></div>
@@ -23,7 +23,7 @@
 
     <section class="hud turn-panel" aria-label="턴 정보">
       <span>현재 턴</span>
-      <strong id="turn-value">1 / 20</strong>
+      <strong id="turn-value">1 / 30</strong>
     </section>
 
     <section class="hud forecast-panel" aria-label="적 출현 예고">
@@ -74,6 +74,20 @@
       <ol id="battle-log"></ol>
     </aside>
   </main>
+
+  <section id="intro-overlay" class="intro-overlay" aria-label="루미나 공방성 도입 장면">
+    <div id="intro-characters" class="intro-characters" aria-hidden="true">
+      <img id="intro-character-lina" class="intro-character" alt="" src="assets/art/characters/portraits/character_lina_standing.png">
+      <img id="intro-character-momo" class="intro-character" alt="" src="assets/art/characters/portraits/character_momo_standing.png">
+      <img id="intro-character-sera" class="intro-character" alt="" src="assets/art/characters/portraits/character_sera_standing.png">
+    </div>
+    <div id="intro-caption" class="intro-caption hidden">
+      <p id="intro-kicker" class="intro-kicker">NARRATION</p>
+      <strong id="intro-speaker" class="intro-speaker"></strong>
+      <p id="intro-text" class="intro-text"></p>
+      <small id="intro-prompt" class="intro-prompt">클릭해서 계속</small>
+    </div>
+  </section>
 
   <div id="modal" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="modal-title">
     <div class="modal-card">

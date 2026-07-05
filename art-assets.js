@@ -1,6 +1,12 @@
 export const ART_ASSETS = {
   background: {
-    stage: "assets/art/backgrounds/bg_stage_stardust.png"
+    stage: "assets/art/backgrounds/bg_stage_stardust.png",
+    intro: "assets/art/backgrounds/bg_intro_narration.png"
+  },
+  characters: {
+    lina: "assets/art/characters/portraits/character_lina_standing.png",
+    momo: "assets/art/characters/portraits/character_momo_standing.png",
+    sera: "assets/art/characters/portraits/character_sera_standing.png"
   },
   tiles: {
     field: "assets/art/tiles/tile_field.png",

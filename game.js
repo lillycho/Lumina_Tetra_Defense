@@ -10,6 +10,7 @@ import {
   blockAssetForState,
   directionIcon
 } from "./art-assets.js";
+import { GAME_BALANCE } from "./game-balance.js";
 
 const $ = (selector) => document.querySelector(selector);
 const elements = {
@@ -29,7 +30,19 @@ const elements = {
   modalKicker: $("#modal-kicker"),
   modalTitle: $("#modal-title"),
   modalContent: $("#modal-content"),
-  modalClose: $("#modal-close")
+  modalClose: $("#modal-close"),
+  introOverlay: $("#intro-overlay"),
+  introCaption: $("#intro-caption"),
+  introKicker: $("#intro-kicker"),
+  introSpeaker: $("#intro-speaker"),
+  introText: $("#intro-text"),
+  introPrompt: $("#intro-prompt"),
+  introCharacters: $("#intro-characters"),
+  introPortraits: {
+    lina: $("#intro-character-lina"),
+    momo: $("#intro-character-momo"),
+    sera: $("#intro-character-sera")
+  }
 };
 
 let game;
@@ -38,20 +51,45 @@ let previewAnchor = null;
 let pendingEvent = null;
 let modalLocked = false;
 let visualEffects = [];
+let introStep = "hidden";
+let introDialogueIndex = 0;
+let introTimer = null;
+
+const INTRO_NARRATION = [
+  "별가루가 내려앉은 밤, 루미나 공방성의 좌우에 푸른 균열이 열렸다.",
+  "오래전 하늘을 떠돌던 테트라 성운 조각이 공방성의 마력로에 닿으며, 잠들어 있던 별가루가 깨어났다.",
+  "균열 너머에서는 완성되지 못한 조각들이 성문을 향해 기어 나오고 있었다.",
+  "왕국 기사단의 등불은 아직 산등성이 너머에 있고, 공방성에 남은 것은 견습생들과 오래된 설계도 카드뿐이었다.",
+  "리나와 친구들은 흔들리는 마력로 앞에서 마지막 방어선을 펼쳤다."
+];
+
+const INTRO_DIALOGUE = [
+  { speaker: "리나", character: "lina", text: "방금 성이... 양쪽으로 흔들렸어. 저 빛, 그냥 별가루가 아니지?" },
+  { speaker: "모모", character: "momo", text: "흠흠. 기록상으로는 테트라 성운 조각이야. 아주 오래전에 하늘에서 길을 잃은 설계의 잔해지." },
+  { speaker: "세라", character: "sera", text: "마력로 출력이 불안정해. 좌우 균열이 성벽을 잡아당기고 있어." },
+  { speaker: "리나", character: "lina", text: "그럼 저 조각들이 성문까지 오기 전에 막아야겠네. 창고의 설계도 카드, 아직 살아 있지?" },
+  { speaker: "모모", character: "momo", text: "당연하지. 먼지는 좀 먹었지만, 고대 방어 기하학의 품위는 멀쩡해." },
+  { speaker: "세라", character: "sera", text: "내가 마력로를 붙잡고 있을게. 리나, 방어선은 네가 세워." },
+  { speaker: "리나", character: "lina", text: "좋아. 기사단이 오기 전까지, 루미나 공방성은 우리가 지킨다!" }
+];
 
 const assetUrl = (path) => `url("${path}")`;
 
 function applyArtTheme() {
   document.documentElement.style.setProperty("--stage-art", assetUrl(ART_ASSETS.background.stage));
+  document.documentElement.style.setProperty("--intro-art", assetUrl(ART_ASSETS.background.intro));
   document.documentElement.style.setProperty("--castle-art", assetUrl(ART_ASSETS.castle.idle));
   document.documentElement.style.setProperty("--castle-hit-art", assetUrl(ART_ASSETS.castle.hit));
   document.documentElement.style.setProperty("--card-blueprint-art", assetUrl(ART_ASSETS.cards.blueprint));
   document.documentElement.style.setProperty("--card-event-art", assetUrl(ART_ASSETS.cards.event));
+  elements.introPortraits.lina.src = ART_ASSETS.characters.lina;
+  elements.introPortraits.momo.src = ART_ASSETS.characters.momo;
+  elements.introPortraits.sera.src = ART_ASSETS.characters.sera;
 }
 
 function tileAsset(depth) {
   if (depth === 0) return ART_ASSETS.tiles.entrance;
-  if (depth === 10) return ART_ASSETS.tiles.spawn;
+  if (depth === GAME_BALANCE.lanes.defenseDepth) return ART_ASSETS.tiles.spawn;
   return ART_ASSETS.tiles.field;
 }
 
@@ -100,6 +138,70 @@ function freshGame() {
   visualEffects = [];
   closeModal(true);
   render();
+  startIntro();
+}
+
+function startIntro() {
+  clearTimeout(introTimer);
+  introStep = "waiting";
+  introDialogueIndex = 0;
+  elements.introOverlay.classList.remove("hidden");
+  elements.introOverlay.classList.add("waiting");
+  elements.introOverlay.classList.remove("dialogue-mode");
+  elements.introCaption.classList.add("hidden");
+  elements.introCharacters.classList.add("hidden");
+  Object.values(elements.introPortraits).forEach((portrait) => portrait.classList.remove("speaking", "dimmed"));
+  introTimer = setTimeout(() => showNarration(), 2000);
+}
+
+function showNarration() {
+  introStep = "narration";
+  elements.introOverlay.classList.remove("waiting");
+  elements.introOverlay.classList.remove("dialogue-mode");
+  elements.introCharacters.classList.add("hidden");
+  elements.introCaption.classList.remove("hidden");
+  elements.introKicker.textContent = "NARRATION";
+  elements.introSpeaker.textContent = "";
+  elements.introText.replaceChildren();
+  INTRO_NARRATION.forEach((sentence) => {
+    const line = document.createElement("span");
+    line.textContent = sentence;
+    elements.introText.append(line);
+  });
+  elements.introPrompt.textContent = "클릭해서 계속";
+}
+
+function showDialogue(index) {
+  const line = INTRO_DIALOGUE[index];
+  introStep = "dialogue";
+  elements.introOverlay.classList.add("dialogue-mode");
+  elements.introCharacters.classList.remove("hidden");
+  elements.introCaption.classList.remove("hidden");
+  elements.introKicker.textContent = "DIALOGUE";
+  elements.introSpeaker.textContent = line.speaker;
+  elements.introText.textContent = line.text;
+  elements.introPrompt.textContent = index === INTRO_DIALOGUE.length - 1 ? "클릭해서 방어 시작" : "클릭해서 계속";
+  Object.entries(elements.introPortraits).forEach(([key, portrait]) => {
+    portrait.classList.toggle("speaking", key === line.character);
+    portrait.classList.toggle("dimmed", key !== line.character);
+  });
+}
+
+function advanceIntro() {
+  if (introStep === "waiting" || introStep === "hidden") return;
+  if (introStep === "narration") {
+    introDialogueIndex = 0;
+    showDialogue(introDialogueIndex);
+    return;
+  }
+  introDialogueIndex += 1;
+  if (introDialogueIndex < INTRO_DIALOGUE.length) {
+    showDialogue(introDialogueIndex);
+    return;
+  }
+  introStep = "hidden";
+  elements.introOverlay.classList.remove("dialogue-mode");
+  elements.introOverlay.classList.add("hidden");
 }
 
 function makeCell(direction, col, depth, previewSet, previewMaterial) {
@@ -111,13 +213,13 @@ function makeCell(direction, col, depth, previewSet, previewMaterial) {
   cell.dataset.cellDepth = String(depth);
   cell.style.setProperty("--tile-art", assetUrl(tileAsset(depth)));
   if (depth === 0) cell.classList.add("entrance");
-  if (depth === 10) cell.classList.add("spawn");
+  if (depth === GAME_BALANCE.lanes.defenseDepth) cell.classList.add("spawn");
   if (previewSet.has(`${col}:${depth}`)) {
     cell.classList.add("preview", `ghost-${previewMaterial}`);
     cell.style.setProperty("--hover-art", assetUrl(ART_ASSETS.tiles.hoverValid));
     cell.title = "클릭하여 이 위치에 배치";
   }
-  const block = depth < 10 ? lane.blocks[depth][col] : null;
+  const block = depth < GAME_BALANCE.lanes.defenseDepth ? lane.blocks[depth][col] : null;
   if (block) {
     cell.classList.add("block", block.material);
     cell.style.setProperty("--block-art", assetUrl(blockAssetForState(block)));
@@ -141,7 +243,7 @@ function makeCell(direction, col, depth, previewSet, previewMaterial) {
       effectMarker.style.setProperty("--enemy-sheet", assetUrl(ART_ASSETS.enemies.fragment.vanish));
       cell.append(effectMarker);
     });
-  if (depth === 10 && lane.queue[col] > 0) {
+  if (depth === GAME_BALANCE.lanes.defenseDepth && lane.queue[col] > 0) {
     const queue = document.createElement("span");
     queue.className = "queue-count";
     queue.textContent = `+${lane.queue[col]}`;
@@ -165,10 +267,12 @@ function renderLane(direction) {
   const preview = active && previewAnchor !== null ? game.getPlacement(card, previewAnchor) : null;
   const previewSet = new Set((preview || []).map(({ col, depth }) => `${col}:${depth}`));
 
+  const laneDepth = GAME_BALANCE.lanes.defenseDepth;
+  const laneWidth = GAME_BALANCE.lanes.width;
   const depths = direction === "left"
-    ? Array.from({ length: 11 }, (_, index) => 10 - index)
-    : Array.from({ length: 11 }, (_, index) => index);
-  for (let col = 0; col < 6; col += 1) depths.forEach((depth) => grid.append(makeCell(direction, col, depth, previewSet, card?.material)));
+    ? Array.from({ length: laneDepth + 1 }, (_, index) => laneDepth - index)
+    : Array.from({ length: laneDepth + 1 }, (_, index) => index);
+  for (let col = 0; col < laneWidth; col += 1) depths.forEach((depth) => grid.append(makeCell(direction, col, depth, previewSet, card?.material)));
 
   grid.setAttribute("role", active ? "button" : "grid");
   grid.setAttribute("aria-label", active
@@ -196,7 +300,7 @@ function renderLane(direction) {
 
   const controls = document.createElement("div");
   controls.className = "column-controls";
-  for (let col = 0; col < 6; col += 1) {
+  for (let col = 0; col < laneWidth; col += 1) {
     const button = document.createElement("button");
     button.type = "button";
     button.className = "column-button";
@@ -292,7 +396,7 @@ function renderInventory() {
   if (!game.inventory.length) {
     const empty = document.createElement("span");
     empty.className = "event-empty";
-    empty.textContent = "합성 3회마다 이벤트 카드가 이곳에 보관됩니다.";
+    empty.textContent = `합성 ${GAME_BALANCE.merge.rewardThreshold}회마다 이벤트 카드가 이곳에 보관됩니다.`;
     elements.inventory.append(empty);
     return;
   }
@@ -308,7 +412,7 @@ function renderInventory() {
 
 function renderGauge() {
   elements.gauge.replaceChildren();
-  for (let index = 0; index < 3; index += 1) {
+  for (let index = 0; index < GAME_BALANCE.merge.rewardThreshold; index += 1) {
     const dot = document.createElement("span");
     dot.className = `merge-dot ${index < game.mergeProgress ? "on" : ""}`;
     dot.style.setProperty("--merge-icon", assetUrl(index < game.mergeProgress ? ART_ASSETS.icons.mergeChargeOn : ART_ASSETS.icons.mergeChargeOff));
@@ -327,7 +431,7 @@ function renderLog() {
 
 function render() {
   elements.turn.textContent = `${game.turn} / ${game.maxTurns}`;
-  elements.rotations.textContent = `${game.rotations} / 10`;
+  elements.rotations.textContent = `${game.rotations} / ${GAME_BALANCE.stage.initialRotations}`;
   elements.seed.textContent = `SEED ${game.seed}`;
   document.body.classList.toggle("castle-hit", game.castleHp <= 1);
   elements.rotate.disabled = selectedCard === null || game.rotations <= 0 || game.status !== "playing" || pendingEvent;
@@ -464,10 +568,10 @@ function showHelp() {
     <ol>
       <li>손패에서 설계도 카드 한 장을 선택합니다.</li>
       <li>카드가 가리키는 전선에 나타난 파란 열 번호를 선택해 블럭을 배치합니다.</li>
-      <li>R 키로 선택 블럭을 회전할 수 있으며, 한 판에 기본 10회만 사용할 수 있습니다.</li>
+      <li>R 키로 선택 블럭을 회전할 수 있으며, 한 판에 기본 ${GAME_BALANCE.stage.initialRotations}회만 사용할 수 있습니다.</li>
       <li>같은 재질 2×2는 다음 재질의 2×1 블럭으로 합성됩니다.</li>
       <li>적은 턴마다 성으로 전진하고, 블럭을 만나면 HP를 1 깎습니다.</li>
-      <li>20턴 종료까지 성 HP를 1 이상 유지하면 승리합니다.</li>
+      <li>${GAME_BALANCE.stage.clearTurn}턴 종료까지 성 HP를 1 이상 유지하면 승리합니다.</li>
     </ol>
     <p>칸의 숫자는 블럭 HP, 붉은 원은 적, 시작칸의 +숫자는 대기 중인 적입니다.</p>`;
 }
@@ -483,9 +587,15 @@ elements.pass.addEventListener("click", () => {
 });
 $("#restart-button").addEventListener("click", freshGame);
 $("#help-button").addEventListener("click", showHelp);
+elements.introOverlay.addEventListener("click", advanceIntro);
 elements.modalClose.addEventListener("click", () => closeModal());
 elements.modal.addEventListener("click", (event) => { if (event.target === elements.modal) closeModal(); });
 document.addEventListener("keydown", (event) => {
+  if (!elements.introOverlay.classList.contains("hidden") && (event.key === " " || event.key === "Enter")) {
+    event.preventDefault();
+    advanceIntro();
+    return;
+  }
   if (event.key.toLowerCase() === "r" && elements.modal.classList.contains("hidden")) rotateSelected();
   if (event.key === "Escape") closeModal();
 });

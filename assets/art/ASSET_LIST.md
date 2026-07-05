@@ -196,6 +196,7 @@
 - `bg_stage_01_sunset.png`: 해질녘 공방성 외곽, 상자와 연습 표지판
 - `bg_stage_02_workshop.png`: 불이 켜진 공방성과 좌우 균열
 - `bg_stage_03_stardust.png`: 밤하늘 성운 조각과 별가루
+- `bg_intro_narration.png`: 나레이션 직전 상황 설명 컷, 루미나 공방성·좌우 균열·별가루·멀리 기사단 등불
 - `bg_title.png`: 타이틀용 공방성 실루엣
 - `overlay_crack_left.png`: 96x320, 왼쪽 균열 투명 오버레이
 - `overlay_crack_right.png`: 96x320, 오른쪽 균열 투명 오버레이
@@ -222,4 +223,3 @@
 8. `characters/portraits/` 캐릭터별 기본 초상과 표정
 9. `backgrounds/` 스테이지 배경
 10. `endings/` 성공·실패 이미지
-
