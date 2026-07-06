@@ -221,8 +221,15 @@ test("2x2 나무 합성은 바깥쪽 줄의 돌 2칸을 만든다", () => {
   const count = game.mergeLane("left");
   assert.equal(count, 1);
   assert.equal(game.mergeProgress, 1);
-  const stones = lane.blocks.flat().filter((block) => block?.material === "stone");
-  assert.equal(stones.length, 2);
+  assert.equal(lane.blocks[4][1]?.material, "stone");
+  assert.equal(lane.blocks[4][2]?.material, "stone");
+  const stoneCells = [];
+  for (let depth = 0; depth < GAME_BALANCE.lanes.defenseDepth; depth += 1) {
+    for (let col = 0; col < GAME_BALANCE.lanes.width; col += 1) {
+      if (lane.blocks[depth][col]?.material === "stone") stoneCells.push(`${depth}:${col}`);
+    }
+  }
+  assert.deepEqual(stoneCells, ["4:1", "4:2"]);
 });
 
 test("적은 앞 블럭을 공격하고 파괴한 턴에는 전진하지 않는다", () => {

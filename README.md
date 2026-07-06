@@ -1,4 +1,4 @@
-# Lumina Tetra Defense Demo
+# 루미나 공방성 데모
 
 `system_design.md`의 단일 스테이지 규칙과 Figma 프레임 3 HUD 배치를 바탕으로 만든 웹 플레이 데모입니다. 외부 패키지나 빌드 과정 없이 Node.js만으로 실행됩니다.
 

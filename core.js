@@ -195,6 +195,7 @@ export class GameState {
     const lane = this.lanes[direction];
     const used = new Set();
     const matches = [];
+    const mergeGaps = new Set();
     for (let depth = 0; depth < GAME_BALANCE.lanes.defenseDepth - 1; depth += 1) {
       for (let col = 0; col < GAME_BALANCE.lanes.width - 1; col += 1) {
         const keys = [[depth, col], [depth, col + 1], [depth + 1, col], [depth + 1, col + 1]];
@@ -208,19 +209,38 @@ export class GameState {
     }
     for (const match of matches) {
       match.keys.forEach(([depth, col]) => { lane.blocks[depth][col] = null; });
+      mergeGaps.add(`${match.depth}:${match.col}`);
+      mergeGaps.add(`${match.depth}:${match.col + 1}`);
       const result = match.material === "wood" ? "stone" : "iron";
       lane.blocks[match.depth + 1][match.col] = makeBlock(result, this.mergeCatalyst ? GAME_BALANCE.merge.catalystHpBonus : 0);
       lane.blocks[match.depth + 1][match.col + 1] = makeBlock(result, this.mergeCatalyst ? GAME_BALANCE.merge.catalystHpBonus : 0);
     }
     if (matches.length) {
       this.mergeCatalyst = 0;
-      this.applyOutwardGravity(direction);
+      this.applyMergeGravity(direction, mergeGaps);
       this.mergeProgress += matches.length;
       this.pendingRewards += Math.floor(this.mergeProgress / GAME_BALANCE.merge.rewardThreshold);
       this.mergeProgress %= GAME_BALANCE.merge.rewardThreshold;
       this.log(`${DIRECTION_LABELS[direction]} 전선에서 합성 ${matches.length}회가 발생했습니다.`);
     }
     return matches.length;
+  }
+
+  applyMergeGravity(direction, mergeGaps) {
+    const lane = this.lanes[direction];
+    let moved = true;
+    while (moved) {
+      moved = false;
+      for (let depth = GAME_BALANCE.lanes.defenseDepth - 1; depth > 0; depth -= 1) {
+        for (let col = 0; col < GAME_BALANCE.lanes.width; col += 1) {
+          if (!mergeGaps.has(`${depth}:${col}`)) continue;
+          if (lane.blocks[depth][col] || !lane.blocks[depth - 1][col]) continue;
+          lane.blocks[depth][col] = lane.blocks[depth - 1][col];
+          lane.blocks[depth - 1][col] = null;
+          moved = true;
+        }
+      }
+    }
   }
 
   applyOutwardGravity(direction) {
