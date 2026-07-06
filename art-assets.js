@@ -72,6 +72,10 @@ export const ART_ASSETS = {
     shapeS: "assets/art/ui/icons/icon_shape_s.png",
     shapeT: "assets/art/ui/icons/icon_shape_t.png",
     shapeZ: "assets/art/ui/icons/icon_shape_z.png"
+  },
+  audio: {
+    bgm: "assets/audio/bgm_workshop_loop.ogg",
+    click: "assets/audio/ui_click.ogg"
   }
 };
 

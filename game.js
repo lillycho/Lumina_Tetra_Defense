@@ -62,6 +62,9 @@ let introStep = "hidden";
 let introDialogueIndex = 0;
 let introTimer = null;
 let tutorialIndex = 0;
+let backgroundMusic = null;
+let clickSound = null;
+let audioUnlocked = false;
 
 const INTRO_NARRATION = [
   "별가루가 내려앉은 밤, 루미나 공방성의 좌우에 푸른 균열이 열렸다.",
@@ -117,6 +120,38 @@ function applyArtTheme() {
   elements.introPortraits.lina.src = ART_ASSETS.characters.lina;
   elements.introPortraits.momo.src = ART_ASSETS.characters.momo;
   elements.introPortraits.sera.src = ART_ASSETS.characters.sera;
+}
+
+function setupAudio() {
+  backgroundMusic = new Audio(ART_ASSETS.audio.bgm);
+  backgroundMusic.loop = true;
+  backgroundMusic.volume = 0.18;
+  backgroundMusic.preload = "auto";
+
+  clickSound = new Audio(ART_ASSETS.audio.click);
+  clickSound.volume = 0.45;
+  clickSound.preload = "auto";
+}
+
+function unlockAudio() {
+  if (audioUnlocked || !backgroundMusic) return;
+  audioUnlocked = true;
+  backgroundMusic.play().catch(() => {
+    audioUnlocked = false;
+  });
+}
+
+function playClickSound() {
+  if (!clickSound) return;
+  const sound = clickSound.cloneNode();
+  sound.volume = clickSound.volume;
+  sound.play().catch(() => {});
+}
+
+function handleGlobalClick(event) {
+  if (!event.isTrusted) return;
+  unlockAudio();
+  playClickSound();
 }
 
 function tileAsset(depth) {
@@ -656,7 +691,9 @@ elements.introOverlay.addEventListener("click", advanceIntro);
 elements.tutorialOverlay.addEventListener("click", advanceTutorial);
 elements.modalClose.addEventListener("click", () => closeModal());
 elements.modal.addEventListener("click", (event) => { if (event.target === elements.modal) closeModal(); });
+document.addEventListener("click", handleGlobalClick, true);
 document.addEventListener("keydown", (event) => {
+  unlockAudio();
   if (!elements.introOverlay.classList.contains("hidden") && (event.key === " " || event.key === "Enter")) {
     event.preventDefault();
     advanceIntro();
@@ -672,4 +709,5 @@ document.addEventListener("keydown", (event) => {
 });
 
 applyArtTheme();
+setupAudio();
 freshGame();
