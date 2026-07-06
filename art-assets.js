@@ -74,6 +74,7 @@ export const ART_ASSETS = {
     shapeZ: "assets/art/ui/icons/icon_shape_z.png"
   },
   audio: {
+    bgm: "assets/audio/bgm_dream_ambient.mp3",
     click: "assets/audio/ui_click.ogg"
   }
 };
