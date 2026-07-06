@@ -49,7 +49,8 @@ const elements = {
   tutorialTitle: $("#tutorial-title"),
   tutorialBody: $("#tutorial-body"),
   tutorialTip: $("#tutorial-tip"),
-  tutorialPrompt: $("#tutorial-prompt")
+  tutorialPrompt: $("#tutorial-prompt"),
+  audio: $("#audio-button")
 };
 
 let game;
@@ -125,19 +126,37 @@ function applyArtTheme() {
 function setupAudio() {
   backgroundMusic = new Audio(ART_ASSETS.audio.bgm);
   backgroundMusic.loop = true;
-  backgroundMusic.volume = 0.16;
+  backgroundMusic.volume = 0.32;
   backgroundMusic.preload = "auto";
 
   clickSound = new Audio(ART_ASSETS.audio.click);
   clickSound.volume = 0.45;
   clickSound.preload = "auto";
+  updateAudioButton();
+}
+
+function updateAudioButton(message = "") {
+  if (!elements.audio) return;
+  elements.audio.setAttribute("aria-pressed", String(audioUnlocked));
+  elements.audio.textContent = message || (audioUnlocked ? "음악 재생 중" : "음악 켜기");
+  elements.audio.classList.toggle("playing", audioUnlocked);
 }
 
 function unlockAudio() {
-  if (audioUnlocked || !backgroundMusic) return;
+  if (!backgroundMusic) return Promise.resolve(false);
+  if (audioUnlocked && !backgroundMusic.paused) {
+    updateAudioButton();
+    return Promise.resolve(true);
+  }
   audioUnlocked = true;
-  backgroundMusic.play().catch(() => {
+  updateAudioButton("음악 켜는 중...");
+  return backgroundMusic.play().then(() => {
+    updateAudioButton();
+    return true;
+  }).catch(() => {
     audioUnlocked = false;
+    updateAudioButton("음악 켜기");
+    return false;
   });
 }
 
@@ -687,6 +706,7 @@ elements.pass.addEventListener("click", () => {
 });
 $("#restart-button").addEventListener("click", freshGame);
 $("#help-button").addEventListener("click", showHelp);
+elements.audio.addEventListener("click", () => unlockAudio());
 elements.introOverlay.addEventListener("click", advanceIntro);
 elements.tutorialOverlay.addEventListener("click", advanceTutorial);
 elements.modalClose.addEventListener("click", () => closeModal());
